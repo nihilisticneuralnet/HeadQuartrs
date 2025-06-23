@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Head Tracking 3D Scene</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: black;
+            font-family: Arial, sans-serif;
+        }
+        
+        .controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 10px;
+            display: block;
+        }
+        
+        .btn-start {
+            background: #16a085;
+            color: white;
+        }
+        
+        .btn-start:hover {
+            background: #138d75;
+        }
+        
+        .btn-stop {
+            background: #e74c3c;
+            color: white;
+        }
+        
+        .btn-stop:hover {
+            background: #c0392b;
+        }
+        
+        .debug-info {
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        
+        .instructions {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 5px;
+            max-width: 300px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .instructions h3 {
+            margin-top: 0;
+            color: #3498db;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .error-msg {
+            background: rgba(231, 76, 60, 0.9);
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div id="scene-container"></div>
+    
+    <div class="controls">
+        <button id="startBtn" class="btn btn-start">Start Head Tracking</button>
+        <div id="debugInfo" class="debug-info hidden">
+            <div><strong>Head Position:</strong></div>
+            <div>X: <span id="posX">0.000</span></div>
+            <div>Y: <span id="posY">0.000</span></div>
+            <div>Z: <span id="posZ">1.000</span></div>
+        </div>
+        <div id="errorMsg" class="error-msg hidden"></div>
+    </div>
+    
+    <div class="instructions">
+        <h3>🎯 Head Tracking 3D Scene</h3>
+        <p><strong>Instructions:</strong></p>
+        <ul>
+            <li>Click "Start Head Tracking"</li>
+            <li>Allow camera access when prompted</li>
+            <li>Move your head left/right, up/down</li>
+            <li>Move closer/farther from camera</li>
+            <li>Watch the 3D perspective change!</li>
+        </ul>
+        <p><small><strong>Note:</strong> Ensure good lighting and face the camera directly for best results.</small></p>
+    </div>
+
+    <video id="video" class="hidden" autoplay muted playsinline></video>
+    <canvas id="canvas" class="hidden"></canvas>
+
+    <script>
+        class HeadTracking3D {
+            constructor() {
+                this.scene = null;
+                this.camera = null;
+                this.renderer = null;
+                this.isTracking = false;
+                this.video = document.getElementById('video');
+                this.canvas = document.getElementById('canvas');
+                this.ctx = this.canvas.getContext('2d');
+                
+                // Tracking parameters
+                this.lastPosition = { x: 0, y: 0, z: 1 };
+                this.smoothingFactor = 0.15;
+                
+                this.init();
+                this.setupEventListeners();
+            }
+            
+            init() {
+                // Scene setup
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x000000);
+                
+                // Camera setup
+                this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+                this.camera.position.set(0, 0, 2);
+                
+                // Renderer setup
+                this.renderer = new THREE.WebGLRenderer({ antialias: true });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.shadowMap.enabled = true;
+                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                
+                const container = document.getElementById('scene-container');
+                container.appendChild(this.renderer.domElement);
+                
+                // Create 3D environment
+                this.createRoom();
+                this.createFloatingObjects();
+                this.setupLighting();
+                
+                // Start animation loop
+                this.animate();
+                
+                // Handle window resize
+                window.addEventListener('resize', () => this.handleResize());
+            }
+            
+            createRoom() {
+                const wallGeometry = new THREE.PlaneGeometry(4, 4);
+                const wallMaterial = new THREE.MeshLambertMaterial({ 
+                    color: 0x333333,
+                    side: THREE.DoubleSide 
+                });
+                
+                // Back wall
+                const backWall = new THREE.Mesh(wallGeometry, wallMaterial);
+                backWall.position.z = -2;
+                this.scene.add(backWall);
+                
+                // Left wall
+                const leftWall = new THREE.Mesh(wallGeometry, wallMaterial);
+                leftWall.rotation.y = Math.PI / 2;
+                leftWall.position.x = -2;
+                this.scene.add(leftWall);
+                
+                // Right wall
+                const rightWall = new THREE.Mesh(wallGeometry, wallMaterial);
+                rightWall.rotation.y = -Math.PI / 2;
+                rightWall.position.x = 2;
+                this.scene.add(rightWall);
+                
+                // Floor
+                const floorGeometry = new THREE.PlaneGeometry(4, 4);
+                const floorMaterial = new THREE.MeshLambertMaterial({ 
+                    color: 0x666666,
+                    side: THREE.DoubleSide 
+                });
+                const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+                floor.rotation.x = -Math.PI / 2;
+                floor.position.y = -2;
+                floor.receiveShadow = true;
+                this.scene.add(floor);
+                
+                // Ceiling
+                const ceiling = new THREE.Mesh(floorGeometry, floorMaterial);
+                ceiling.rotation.x = Math.PI / 2;
+                ceiling.position.y = 2;
+                this.scene.add(ceiling);
+            }
+            
+            createFloatingObjects() {
+                const objects = [
+                    { geometry: new THREE.BoxGeometry(0.3, 0.3, 0.3), color: 0xff0000, position: [-1, 0.5, 0.5] },
+                    { geometry: new THREE.SphereGeometry(0.2), color: 0x00ff00, position: [1, -0.5, 0.8] },
+                    { geometry: new THREE.ConeGeometry(0.15, 0.4), color: 0x0000ff, position: [0, 1, -0.5] },
+                    { geometry: new THREE.CylinderGeometry(0.1, 0.1, 0.5), color: 0xffff00, position: [-0.8, -1, 1.2] },
+                    { geometry: new THREE.OctahedronGeometry(0.2), color: 0xff00ff, position: [1.2, 0.8, -1] },
+                    { geometry: new THREE.TorusGeometry(0.15, 0.05), color: 0x00ffff, position: [-1.5, -0.3, -0.8] }
+                ];
+                
+                objects.forEach((obj, index) => {
+                    const material = new THREE.MeshLambertMaterial({ color: obj.color });
+                    const mesh = new THREE.Mesh(obj.geometry, material);
+                    mesh.position.set(...obj.position);
+                    mesh.castShadow = true;
+                    mesh.userData.rotate = index % 2 === 0;
+                    this.scene.add(mesh);
+                });
+                
+                // Add target rings at different depths
+                for (let i = 0; i < 3; i++) {
+                    const ringGeometry = new THREE.RingGeometry(0.3 + i * 0.1, 0.4 + i * 0.1, 32);
+                    const ringMaterial = new THREE.MeshBasicMaterial({ 
+                        color: 0xff0000,
+                        side: THREE.DoubleSide,
+                        transparent: true,
+                        opacity: 0.7 
+                    });
+                    const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+                    ring.position.set(0, 0, -1.5 + i * 0.5);
+                    this.scene.add(ring);
+                }
+            }
+            
+            setupLighting() {
+                const ambientLight = new THREE.AmbientLight(0x404040, 0.3);
+                this.scene.add(ambientLight);
+                
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                directionalLight.position.set(5, 5, 5);
+                directionalLight.castShadow = true;
+                directionalLight.shadow.mapSize.width = 2048;
+                directionalLight.shadow.mapSize.height = 2048;
+                this.scene.add(directionalLight);
+            }
+            
+            animate() {
+                requestAnimationFrame(() => this.animate());
+                
+                // Rotate objects for visual interest
+                this.scene.traverse((child) => {
+                    if (child.userData.rotate) {
+                        child.rotation.x += 0.01;
+                        child.rotation.y += 0.01;
+                    }
+                });
+                
+                this.renderer.render(this.scene, this.camera);
+            }
+            
+            async startCamera() {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ 
+                        video: { 
+                            width: 640, 
+                            height: 480,
+                            frameRate: 30
+                        } 
+                    });
+                    
+                    this.video.srcObject = stream;
+                    await this.video.play();
+                    this.isTracking = true;
+                    this.startHeadTracking();
+                    this.updateUI();
+                    this.hideError();
+                    
+                } catch (err) {
+                    console.error('Camera error:', err);
+                    let errorMsg = 'Camera access failed. ';
+                    
+                    if (err.name === 'NotAllowedError') {
+                        errorMsg += 'Please grant camera permission and try again.';
+                    } else if (err.name === 'NotFoundError') {
+                        errorMsg += 'No camera found. Please connect a webcam.';
+                    } else if (location.protocol === 'file:') {
+                        errorMsg += 'Camera access requires HTTPS or localhost. Please run a local server.';
+                    } else {
+                        errorMsg += err.message;
+                    }
+                    
+                    this.showError(errorMsg);
+                }
+            }
+            
+            stopCamera() {
+                if (this.video.srcObject) {
+                    const tracks = this.video.srcObject.getTracks();
+                    tracks.forEach(track => track.stop());
+                    this.video.srcObject = null;
+                }
+                this.isTracking = false;
+                this.updateUI();
+            }
+            
+            startHeadTracking() {
+                const trackHead = () => {
+                    if (!this.isTracking || !this.video.videoWidth) {
+                        requestAnimationFrame(trackHead);
+                        return;
+                    }
+                    
+                    this.canvas.width = this.video.videoWidth;
+                    this.canvas.height = this.video.videoHeight;
+                    this.ctx.drawImage(this.video, 0, 0);
+                    
+                    const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+                    const headPosition = this.detectHead(imageData);
+                    
+                    if (headPosition) {
+                        this.updateCameraPerspective(headPosition);
+                    }
+                    
+                    requestAnimationFrame(trackHead);
+                };
+                
+                trackHead();
+            }
+            
+            detectHead(imageData) {
+                const data = imageData.data;
+                const width = imageData.width;
+                const height = imageData.height;
+                
+                let totalX = 0, totalY = 0, count = 0;
+                
+                // Simplified face detection looking for skin tones
+                for (let y = height * 0.1; y < height * 0.7; y += 4) {
+                    for (let x = width * 0.2; x < width * 0.8; x += 4) {
+                        const i = (y * width + x) * 4;
+                        const r = data[i];
+                        const g = data[i + 1];
+                        const b = data[i + 2];
+                        
+                        // Detect skin-tone-ish pixels
+                        if (r > 120 && g > 80 && b > 60 && r > g && g > b) {
+                            totalX += x;
+                            totalY += y;
+                            count++;
+                        }
+                    }
+                }
+                
+                if (count > 100) {
+                    const centerX = totalX / count;
+                    const centerY = totalY / count;
+                    
+                    // Normalize to -1 to 1 range
+                    const normalizedX = (centerX / width - 0.5) * 2;
+                    const normalizedY = -(centerY / height - 0.5) * 2;
+                    
+                    // Estimate distance based on detected region size
+                    const regionSize = Math.sqrt(count) / 100;
+                    const distance = Math.max(0.3, Math.min(3, 1 / regionSize));
+                    
+                    return { x: normalizedX, y: normalizedY, z: distance };
+                }
+                
+                return null;
+            }
+            
+            updateCameraPerspective(headPos) {
+                // Smooth the movement
+                const smoothX = this.lastPosition.x + (headPos.x - this.lastPosition.x) * this.smoothingFactor;
+                const smoothY = this.lastPosition.y + (headPos.y - this.lastPosition.y) * this.smoothingFactor;
+                const smoothZ = this.lastPosition.z + (headPos.z - this.lastPosition.z) * this.smoothingFactor;
+                
+                this.lastPosition = { x: smoothX, y: smoothY, z: smoothZ };
+                
+                // Update camera position
+                const eyeX = smoothX * 0.5;
+                const eyeY = smoothY * 0.3;
+                const eyeZ = smoothZ * 2;
+                
+                this.camera.position.set(eyeX, eyeY, eyeZ);
+                this.camera.lookAt(0, 0, 0);
+                
+                // Create off-axis projection
+                const screenWidth = 2;
+                const screenHeight = 1.5;
+                const left = -screenWidth / 2 - eyeX;
+                const right = screenWidth / 2 - eyeX;
+                const bottom = -screenHeight / 2 - eyeY;
+                const top = screenHeight / 2 - eyeY;
+                const near = eyeZ - 0.1;
+                const far = eyeZ + 10;
+                
+                this.camera.projectionMatrix.makePerspective(
+                    Math.atan2(left, near) * 180 / Math.PI,
+                    Math.atan2(right, near) * 180 / Math.PI,
+                    Math.atan2(top, near) * 180 / Math.PI,
+                    Math.atan2(bottom, near) * 180 / Math.PI,
+                    near,
+                    far
+                );
+                
+                // Update debug display
+                document.getElementById('posX').textContent = smoothX.toFixed(3);
+                document.getElementById('posY').textContent = smoothY.toFixed(3);
+                document.getElementById('posZ').textContent = smoothZ.toFixed(3);
+            }
+            
+            setupEventListeners() {
+                const startBtn = document.getElementById('startBtn');
+                startBtn.addEventListener('click', () => {
+                    if (this.isTracking) {
+                        this.stopCamera();
+                    } else {
+                        this.startCamera();
+                    }
+                });
+            }
+            
+            updateUI() {
+                const startBtn = document.getElementById('startBtn');
+                const debugInfo = document.getElementById('debugInfo');
+                
+                if (this.isTracking) {
+                    startBtn.textContent = 'Stop Tracking';
+                    startBtn.className = 'btn btn-stop';
+                    debugInfo.classList.remove('hidden');
+                } else {
+                    startBtn.textContent = 'Start Head Tracking';
+                    startBtn.className = 'btn btn-start';
+                    debugInfo.classList.add('hidden');
+                }
+            }
+            
+            showError(message) {
+                const errorMsg = document.getElementById('errorMsg');
+                errorMsg.textContent = message;
+                errorMsg.classList.remove('hidden');
+            }
+            
+            hideError() {
+                const errorMsg = document.getElementById('errorMsg');
+                errorMsg.classList.add('hidden');
+            }
+            
+            handleResize() {
+                const width = window.innerWidth;
+                const height = window.innerHeight;
+                this.camera.aspect = width / height;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(width, height);
+            }
+        }
+        
+        // Initialize the application
+        window.addEventListener('DOMContentLoaded', () => {
+            new HeadTracking3D();
+        });
+    </script>
+</body>
+</html>
