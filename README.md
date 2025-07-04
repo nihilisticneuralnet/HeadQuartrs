@@ -1,0 +1,3 @@
+- https://youtu.be/qtA0JS1lBaY?si=fST2C5XPi4ZlAyuH mi russia
+- https://processing.org/tutorials/p3d
+- https://youtu.be/Jd3-eiid-Uw?si=uC22hg4hJnk3u0AF wii remote
