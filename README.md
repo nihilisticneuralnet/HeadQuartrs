@@ -13,6 +13,8 @@ const mappedY = -(deltaY * maxTrackingDistance) * 2; // Invert Y and amplify
 // Change to:
 const mappedX = (deltaX * maxTrackingDistance) * 0.5; // Reduce amplification
 const mappedY = -(deltaY * maxTrackingDistance) * 0.5; // Reduce amplification
+
+
 2. Increase Smoothing
 Modify the smoothing factor:
 javascript// Current:
@@ -20,6 +22,8 @@ const smoothingFactor = 0.15;
 
 // Change to:
 const smoothingFactor = 0.05; // More smoothing = less jittery movement
+
+
 3. Reduce Camera Movement Scale
 In the updateCameraPosition function:
 javascript// Current:
@@ -29,6 +33,8 @@ const cameraY = y * 0.1;
 // Change to:
 const cameraX = x * 0.03; // Further scale down
 const cameraY = y * 0.03;
+
+
 4. Reduce Off-Axis Projection Sensitivity
 In the updateOffAxisProjection function:
 javascript// Current:
@@ -36,6 +42,8 @@ const offsetScale = 0.005;
 
 // Change to:
 const offsetScale = 0.001; // Much less sensitive perspective shift
+
+
 5. Optional: Add Dead Zone
 You could also add a dead zone to ignore very small movements. Add this to updateHeadTracking:
 javascript// Add after calculating deltaX and deltaY:
