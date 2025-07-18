@@ -1,0 +1,82 @@
+body {
+    margin: 0;
+    padding: 0;
+    background: #000;
+    font-family: Arial, sans-serif;
+    overflow: hidden;
+}
+
+#container {
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+}
+
+#controls {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    color: white;
+    background: rgba(0,0,0,0.8);
+    padding: 15px;
+    border-radius: 8px;
+    z-index: 100;
+    font-size: 14px;
+}
+
+#video {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 160px;
+    height: 120px;
+    border: 2px solid #fff;
+    border-radius: 8px;
+    z-index: 100;
+    transform: scaleX(-1);
+}
+
+#calibration {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    background: rgba(0,0,0,0.9);
+    padding: 30px;
+    border-radius: 10px;
+    text-align: center;
+    z-index: 200;
+    display: none;
+}
+
+#calibration button {
+    background: #4CAF50;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    margin: 10px;
+}
+
+#calibration button:hover {
+    background: #45a049;
+}
+
+canvas {
+    display: block;
+}
+
+.status {
+    margin: 5px 0;
+}
+
+.status.good {
+    color: #4CAF50;
+}
+
+.status.bad {
+    color: #f44336;
+}

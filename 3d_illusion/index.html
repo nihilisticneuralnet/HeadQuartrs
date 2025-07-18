@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Head Tracking for Desktop VR Displays</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="container">
+        <div id="controls">
+            <div class="status" id="cameraStatus">Camera: Initializing...</div>
+            <div class="status" id="trackingStatus">Tracking: Not Started</div>
+            <div>Head X: <span id="headX">0.0</span></div>
+            <div>Head Y: <span id="headY">0.0</span></div>
+            <div>Distance: <span id="distance">0.0</span></div>
+            <div style="margin-top: 10px;">
+                <button onclick="startCalibration()">Calibrate</button>
+                <button onclick="resetTracking()">Reset</button>
+            </div>
+        </div>
+        
+        <video id="video" autoplay muted></video>
+        <canvas id="canvas"></canvas>
+        
+        <div id="calibration">
+            <h3>Head Tracking Calibration</h3>
+            <p>Position your head in the center of the camera view and click the button below</p>
+            <button onclick="calibrateCenter()">Calibrate Center Position</button>
+            <button onclick="cancelCalibration()">Cancel</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
