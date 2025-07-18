@@ -19,9 +19,9 @@ body {
 #screen {
     width: 100vw;
     height: 100vh;
-    background: #000;  /* Change to black since it's now the full background */
-    border: none;      /* Remove border */
-    border-radius: 0;  /* Remove border radius */
+    background: #000;  
+    border: none;     
+    border-radius: 0;  
     position: relative;
     overflow: hidden;
     box-shadow: none; 
