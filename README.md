@@ -1,4 +1,4 @@
-# HeadQuartrs: Head Tracking for Desktop VR Displays
+# CamHead: Head Tracking for Desktop VR Displays
 
 Inspired by [Johnny Lee's Head Tracking for Desktop VR Displays using the Wii Remote](https://www.youtube.com/watch?v=Jd3-eiid-Uw)
 
